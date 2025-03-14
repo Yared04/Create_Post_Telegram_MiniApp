@@ -22,13 +22,50 @@ function App() {
   };
 
   const handleSubmit = () => {
-    console.log('form', form.getFieldsValue());
-    form.resetFields()
-  }
+    const formData = new FormData();
+    const fields = form.getFieldsValue();
+    Object.keys(fields).forEach(key => {
+      formData.append(key, fields[key]);
+    });
+
+    const fileList = form.getFieldValue('upload');
+    if (fileList) {
+      fileList.forEach((file: any) => {
+        formData.append('files', file.originFileObj);
+      });
+    }
+
+    // Send formData to your Telegram bot
+    // fetch('http://localhost:5000/post_event', {
+    //   method: 'POST',
+    //   body: formData,
+    // })
+    //   .then(response => response.json())
+    //   .then(data => {
+    //     console.log('Success:', data);
+    //     form.resetFields();
+    //   })
+    //   .catch((error) => {
+    //     console.error('Error:', error);
+    //   });
+    fetch("http://localhost:5000/post_event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: "client_1",
+        event_name: "New Tech Meetup",
+        location: "New York",
+        time: "March 20, 2025 - 6:00 PM"
+      })
+    })
+      .then(response => response.json())
+      .then(data => console.log(data))
+      .catch(error => console.error("Error:", error));
+  };
 
   return (
     <div className='flex flex-col items-center justify-center max-w-lg mx-auto p-6'>
-      <h2 className='text-xl font-semibold'>Create a Post</h2>
+      <h2 className='text-xl font-semibold'>Create Post</h2>
       <Form
         layout="vertical"
         style={{ width: '100%' }}
