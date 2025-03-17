@@ -37,7 +37,7 @@ function App() {
 
     // Send formData to your Telegram bot
     fetch('http://localhost:5000/post_event', {
-      method: 'POST',
+      method: "POST",
       body: formData,
     })
       .then(response => response.json())
@@ -48,19 +48,6 @@ function App() {
       .catch((error) => {
         console.error('Error:', error);
       });
-    //   fetch("http://localhost:5000/post_event", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({
-    //       client_id: "client_1",
-    //       event_name: "New Tech Meetup",
-    //       location: "New York",
-    //       time: "March 20, 2025 - 6:00 PM"
-    //     })
-    //   })
-    //     .then(response => response.json())
-    //     .then(data => console.log(data))
-    //     .catch(error => console.error("Error:", error));
   };
 
   return (
