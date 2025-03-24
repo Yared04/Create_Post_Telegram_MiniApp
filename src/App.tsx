@@ -7,11 +7,13 @@ import {
   Switch,
   Upload,
 } from 'antd';
+import { useState } from 'react';
 const { TextArea } = Input;
-const { TimePicker } = DatePicker;
+const { RangePicker } = DatePicker;
 
 function App() {
   const [form] = Form.useForm();
+  const [isCalendarEnabled, setIsCalendarEnabled] = useState(false);
 
 
   const normFile = (e: any) => {
@@ -27,6 +29,7 @@ function App() {
     Object.keys(fields).forEach(key => {
       formData.append(key, fields[key]);
     });
+
 
     const fileList = form.getFieldValue('upload');
     if (fileList) {
@@ -50,6 +53,10 @@ function App() {
       });
   };
 
+  const onSwitch = (checked: boolean) => {
+    setIsCalendarEnabled(checked);
+  };
+
   return (
     <div className='flex flex-col items-center justify-center max-w-lg mx-auto p-6'>
       <h2 className='text-xl font-semibold'>Create Post</h2>
@@ -70,7 +77,7 @@ function App() {
         <Form.Item label="Description" name="description">
           <TextArea rows={4} />
         </Form.Item>
-        <Form.Item label="Upload" name="upload" valuePropName="fileList" getValueFromEvent={normFile}>
+        <Form.Item label="Images" name="upload" valuePropName="fileList" getValueFromEvent={normFile}>
           <Upload listType="picture-card" multiple={true}>
             <button
               style={{ color: 'inherit', cursor: 'inherit', border: 0, background: 'none' }}
@@ -81,17 +88,19 @@ function App() {
             </button>
           </Upload>
         </Form.Item>
-        <div className='flex justify-between'>
-          <Form.Item label="Date" name="date">
-            <DatePicker className='mr-2' />
-          </Form.Item>
-          <Form.Item label="Time" name="time">
-            <TimePicker />
-          </Form.Item>
-        </div>
-        <Form.Item className='place-self-start' layout='horizontal' label="Add calendar button" name="calendarButton" valuePropName="checked">
-          <Switch />
+        <Form.Item className='place-self-start' layout='horizontal' label="Add to Calendar" name="calendarButton" valuePropName="checked">
+          <Switch defaultChecked={isCalendarEnabled} onChange={onSwitch} />
         </Form.Item>
+        {isCalendarEnabled === true && (
+          <>
+            <Form.Item label="Date and Time" name="date">
+              <RangePicker showTime format="HH:mm" />
+            </Form.Item>
+            <Form.Item label="Location" name="location">
+              <Input placeholder="Paste a Google Maps link (e.g., https://goo.gl/maps/...)" />
+            </Form.Item>
+          </>)
+        }
         <Form.Item label={null}>
           <Button size='large' className='' type='primary' htmlType="submit">
             Submit
