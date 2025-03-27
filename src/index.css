@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+body {
+  font-family: "Trebuchet MS", sans-serif;
+  /* background-color: #f2f3f4; */
+}
