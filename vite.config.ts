@@ -5,4 +5,9 @@ import tailiwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailiwindcss()],
+  server: {
+    allowedHosts: [
+      "crafts-radio-suddenly-backgrounds.trycloudflare.com",
+    ],
+  },
 });

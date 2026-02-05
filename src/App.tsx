@@ -1,12 +1,21 @@
 import { PlusOutlined, SendOutlined, SyncOutlined } from "@ant-design/icons";
-import { Button, DatePicker, Form, Input, Switch, Upload, message } from "antd";
-import { useState } from "react";
+import {
+  Button,
+  DatePicker,
+  Form,
+  Input,
+  Switch,
+  Upload,
+  message,
+  ConfigProvider,
+  theme,
+} from "antd";
+import { useState, useEffect } from "react";
 import moment from "moment-timezone";
 import { UploadChangeParam } from "antd/es/upload";
 import { useSearchParams } from "react-router-dom";
 
 const { TextArea } = Input;
-const { RangePicker } = DatePicker;
 
 function App() {
   const [form] = Form.useForm();
@@ -14,6 +23,44 @@ function App() {
   const [messageApi, contextHolder] = message.useMessage();
   const [isCalendarEnabled, setIsCalendarEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Theme state
+  const [appTheme, setAppTheme] = useState<{
+    algorithm: any;
+    token: any;
+  }>({
+    algorithm: theme.defaultAlgorithm,
+    token: {},
+  });
+
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+
+      const colorScheme = tg.colorScheme;
+      const themeParams = tg.themeParams;
+      const isDark = colorScheme === "dark";
+
+      // Apply background and text color to body immediately
+      document.body.style.backgroundColor =
+        themeParams.bg_color || (isDark ? "#000000" : "#ffffff");
+      document.body.style.color =
+        themeParams.text_color || (isDark ? "#ffffff" : "#000000");
+
+      setAppTheme({
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+        token: {
+          colorPrimary: themeParams.button_color || "#1677ff",
+          colorText: themeParams.text_color,
+          // Use secondary_bg_color for inputs/cards if available, otherwise fallback
+          colorBgContainer: themeParams.secondary_bg_color || (isDark ? "#1f1f1f" : "#ffffff"),
+          colorBgBase: themeParams.bg_color || (isDark ? "#000000" : "#ffffff"),
+          colorTextPlaceholder: themeParams.hint_color,
+        },
+      });
+    }
+  }, []);
 
   const files = Form.useWatch("upload", form);
   const clientId = searchParams.get("client_id");
@@ -33,13 +80,14 @@ function App() {
     // Append non-empty fields
     Object.entries(fields).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
-        if (Array.isArray(value)) {
-          // Handle arrays like date ranges separately
-          if (key === "date" && value.length === 2) {
-            formData.append("start_date", moment(value[0]).format());
-            formData.append("end_date", moment(value[1]).format());
-          }
-        } else {
+        // Handle date fields specially - they come as Dayjs objects from Ant Design DatePicker
+        if (key === "start_date" || key === "end_date") {
+          // Check if it's a moment/dayjs object with toISOString method
+          const dateValue = (value as any)?.toISOString
+            ? (value as any).toISOString()
+            : moment(value).toISOString();
+          formData.append(key, dateValue);
+        } else if (!Array.isArray(value)) {
           formData.append(key, String(value));
         }
       }
@@ -47,6 +95,10 @@ function App() {
 
     // Append required client_id
     formData.append("client_id", String(clientId));
+
+    // Get Telegram initData for authentication and append it to formData
+    const initData = (window as any).Telegram?.WebApp?.initData || "";
+    formData.append("telegram_init_data", initData);
 
     // Handle file uploads
     const fileList = form.getFieldValue("upload");
@@ -59,13 +111,14 @@ function App() {
     }
     // Send formData to your Telegram bot
     try {
-      const response = await fetch(
-        "https://bot-backend-xuh1.onrender.com/post_event",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const apiUrl =
+        (import.meta.env.VITE_API_URL || "http://localhost:2000") +
+        "/post_event";
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        body: formData,
+      });
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
@@ -77,13 +130,13 @@ function App() {
         });
         setLoading(false);
       }, 0);
-    } catch (error) {
+    } catch (error: any) {
       {
         console.error("Error:", error);
         setTimeout(() => {
           messageApi.open({
             type: "error",
-            content: "Error creating post. Please try again.",
+            content: String(error),
           });
           setLoading(false);
         }, 0);
@@ -96,10 +149,10 @@ function App() {
   };
 
   return (
-    <>
+    <ConfigProvider theme={appTheme}>
       {contextHolder}
-      <div className="flex flex-col items-center justify-center max-w-lg mx-auto p-6">
-        <h2 className="text-xl font-semibold">Create Post</h2>
+      <div className="flex flex-col items-center justify-center max-w-lg mx-auto p-6 transition-colors duration-300">
+        <h2 className="text-xl font-semibold mb-4" style={{ color: appTheme.token.colorText }}>Create Post</h2>
         <Form
           layout="vertical"
           style={{ width: "100%" }}
@@ -109,7 +162,7 @@ function App() {
         >
           <Form.Item
             hasFeedback
-            label="Title"
+            label={<span style={{ color: appTheme.token.colorText }}>Title</span>}
             name="title"
             rules={[
               { max: 100, message: "Title must be less than 100 characters" },
@@ -118,7 +171,7 @@ function App() {
             <Input />
           </Form.Item>
           <Form.Item
-            label="Description"
+            label={<span style={{ color: appTheme.token.colorText }}>Description</span>}
             name="description"
             hasFeedback
             rules={[
@@ -132,7 +185,7 @@ function App() {
           </Form.Item>
           <Form.Item
             hasFeedback
-            label="Images"
+            label={<span style={{ color: appTheme.token.colorText }}>Images</span>}
             name="upload"
             valuePropName="fileList"
             getValueFromEvent={normFile}
@@ -150,6 +203,7 @@ function App() {
                 <button
                   className="text-inherit cursor-pointer border-0 bg-none"
                   type="button"
+                  style={{ color: appTheme.token.colorText }}
                 >
                   <PlusOutlined />
                   <div className="mt-1">Upload</div>
@@ -160,7 +214,7 @@ function App() {
           <Form.Item
             className="place-self-start"
             layout="horizontal"
-            label="Add to Calendar"
+            label={<span style={{ color: appTheme.token.colorText }}>Add to Calendar</span>}
             name="calendarButton"
             valuePropName="checked"
           >
@@ -169,26 +223,53 @@ function App() {
           {isCalendarEnabled === true && (
             <>
               <Form.Item
-                label="Date and Time"
-                name="date"
+                label={<span style={{ color: appTheme.token.colorText }}>Start Date & Time</span>}
+                name="start_date"
                 hasFeedback
                 rules={[
                   {
                     required: true,
-                    message: "Please select a date and time for the event",
+                    message: "Please select a start date and time",
                   },
                 ]}
               >
-                <RangePicker showTime format="HH:mm" />
+                <DatePicker
+                  showTime={{ format: "h:mm A", use12Hours: true }}
+                  format="YYYY-MM-DD h:mm A"
+                  placement="bottomRight"
+                  size="large"
+                  style={{ width: "100%" }}
+                  placeholder="Select start date and time"
+                />
               </Form.Item>
               <Form.Item
-                label="Location"
+                label={<span style={{ color: appTheme.token.colorText }}>End Date & Time</span>}
+                name="end_date"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                    message: "Please select an end date and time",
+                  },
+                ]}
+              >
+                <DatePicker
+                  showTime={{ format: "h:mm A", use12Hours: true }}
+                  format="YYYY-MM-DD h:mm A"
+                  size="large"
+                  placement="bottomRight"
+                  style={{ width: "100%" }}
+                  placeholder="Select end date and time"
+                />
+              </Form.Item>
+              <Form.Item
+                label={<span style={{ color: appTheme.token.colorText }}>Location</span>}
                 name="location"
                 hasFeedback
                 rules={[
                   {
                     pattern: new RegExp(
-                      /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)(\/[\w-]*)*\/?$/
+                      /^(https?:\/\/)?([\w-]+(\.\w-]+)+)(\/[\w-]*)*\/?$/
                     ),
                     message: "Please input a valid link",
                   },
@@ -215,7 +296,7 @@ function App() {
           </Form.Item>
         </Form>
       </div>
-    </>
+    </ConfigProvider>
   );
 }
 
