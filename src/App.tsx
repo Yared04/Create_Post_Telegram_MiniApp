@@ -268,9 +268,7 @@ function App() {
                 hasFeedback
                 rules={[
                   {
-                    pattern: new RegExp(
-                      /^(https?:\/\/)?([\w-]+(\.\w-]+)+)(\/[\w-]*)*\/?$/
-                    ),
+                    type: "url",
                     message: "Please input a valid link",
                   },
                 ]}
